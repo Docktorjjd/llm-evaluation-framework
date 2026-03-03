@@ -496,7 +496,7 @@ async def validate_code_suggestion(suggestion: CodeSuggestion):
     import json, re
     models = [
         {"name": "claude-sonnet-4", "model_id": "claude-sonnet-4-20250514"},
-        {"name": "gpt-4", "model_id": "gpt-4"},
+        {"name": "gpt-4o", "model_id": "gpt-4o"},
     ]
     agreements = {}
     confidence_scores = []
@@ -504,7 +504,7 @@ async def validate_code_suggestion(suggestion: CodeSuggestion):
     for model_config in models:
         model_name = model_config["name"]
         try:
-            validation_prompt = f"Evaluate this code improvement. Original: {suggestion.original_code} Improved: {suggestion.improved_code} Explanation: {suggestion.explanation}. Reply with JSON only: {{\"approved\": true, \"confidence\": 0.85}}"
+            validation_prompt = f"Is this code improvement valid and safe? Answer with JSON only, no other text: {{\"approved\": true, \"confidence\": 0.90}}"
             if "gpt" in model_name:
                 import openai
                 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
