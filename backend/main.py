@@ -504,7 +504,7 @@ async def validate_code_suggestion(suggestion: CodeSuggestion):
     for model_config in models:
         model_name = model_config["name"]
         try:
-            validation_prompt = f"Is this code improvement valid and safe? Answer with JSON only, no other text: {{\"approved\": true, \"confidence\": 0.90}}"
+            validation_prompt = f"You are a code reviewer. Review this security improvement and respond with ONLY valid JSON, nothing else. Original code: {suggestion.original_code}. Improved code: {suggestion.improved_code}. Explanation: {suggestion.explanation}. Respond with exactly this JSON format: {{\"approved\": true, \"confidence\": 0.90}}"
             if "gpt" in model_name:
                 import openai
                 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
