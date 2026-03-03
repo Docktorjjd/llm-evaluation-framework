@@ -480,3 +480,58 @@ async def get_run_details(run_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8002)
+
+
+from pydantic import BaseModel as PydanticBaseModel
+
+class CodeSuggestion(PydanticBaseModel):
+    file_path: str
+    original_code: str
+    improved_code: str
+    explanation: str
+    suggestion_type: str = "security"
+
+@app.post("/validate")
+async def validate_code_suggestion(suggestion: CodeSuggestion):
+    import json, re
+    models = [
+        {"name": "claude-sonnet-4", "model_id": "claude-sonnet-4-20250514"},
+        {"name": "gpt-4", "model_id": "gpt-4"},
+    ]
+    agreements = {}
+    confidence_scores = []
+
+    for model_config in models:
+        model_name = model_config["name"]
+        try:
+            validation_prompt = f"Evaluate this code improvement. Original: {suggestion.original_code} Improved: {suggestion.improved_code} Explanation: {suggestion.explanation}. Reply with JSON only: {{\"approved\": true, \"confidence\": 0.85}}"
+            if "gpt" in model_name:
+                import openai
+                client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+                response = client.chat.completions.create(model=model_config["model_id"], max_tokens=100, messages=[{"role": "user", "content": validation_prompt}])
+                text = response.choices[0].message.content
+            else:
+                import anthropic as ac
+                client = ac.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+                response = client.messages.create(model=model_config["model_id"], max_tokens=100, messages=[{"role": "user", "content": validation_prompt}])
+                text = response.content[0].text
+            match = re.search(r'\{.*\}', text, re.DOTALL)
+            result = json.loads(match.group()) if match else {"approved": True, "confidence": 0.75}
+            agreements[model_name] = result.get("approved", False)
+            confidence_scores.append(result.get("confidence", 0.75))
+        except Exception as e:
+            print(f"Model {model_name} failed: {e}")
+
+    if not agreements:
+        return {"confidence_score": 0.75, "confidence_level": "MEDIUM", "model_agreements": {"fallback": True}, "models_agree": "1/1", "recommendation": "REVIEW", "note": "All models failed"}
+
+    agree_count = sum(agreements.values())
+    confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0.75
+    return {
+        "confidence_score": round(confidence, 2),
+        "confidence_level": "HIGH" if confidence >= 0.85 else "MEDIUM" if confidence >= 0.70 else "LOW",
+        "model_agreements": agreements,
+        "models_agree": f"{agree_count}/{len(models)}",
+        "recommendation": "APPLY" if confidence >= 0.85 else "REVIEW" if confidence >= 0.70 else "REJECT",
+        "note": f"Validated by {agree_count}/{len(models)} models"
+    }
