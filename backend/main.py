@@ -495,9 +495,9 @@ class CodeSuggestion(PydanticBaseModel):
 async def validate_code_suggestion(suggestion: CodeSuggestion):
     import json, re
     models = [
-        {"name": "claude-sonnet-4", "model_id": "claude-sonnet-4-20250514"},
-        {"name": "gpt-4o", "model_id": "gpt-4o"},
-    ]
+    {"name": "claude-sonnet-4", "model_id": "claude-sonnet-4-20250514"},
+    {"name": "claude-haiku", "model_id": "claude-haiku-4-5-20251001"},
+]
     agreements = {}
     confidence_scores = []
 
